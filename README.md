@@ -7,7 +7,7 @@
 
 改完 `index.html`（或任何檔案）後：
 
-1. 把 `sw.js` 第一行的 `VERSION` 加 1（例如 `'v1'` → `'v2'`）
+1. 把 `sw.js` 第 2 行的 `VERSION` 加 1（例如 `'v1'` → `'v2'`）
 2. `git add -A && git commit -m "說明這次改了什麼"`
 3. `git push`
 
