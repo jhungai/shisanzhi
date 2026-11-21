@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0e5a3a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="十三支">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<title>十三支計分器</title>
+<style>
+/* VOICE: 牌桌上的計分員，清楚、快、不出錯
+   IDEA: 綠絨牌桌 + 白色撲克牌
+   PICTURE: 頂端四張「牌」記分板，大字顯示分數與餘額
+   COLOUR and TYPE: 牌桌綠、牌面白、紅心紅；Noto Sans TC
+   LAYOUT: 記分板 → 本局輸入（三墩排名）→ 預覽 → 紀錄 → 設定 */
+:root{color-scheme:light dark;--felt:light-dark(#0e5a3a,#062b1c);--felt2:light-dark(#0b4a30,#04200f);--card:light-dark(#ffffff,#13241b);--ink:light-dark(#10201a,#e8f3ec);--mute:light-dark(#5b6b63,#9fb3a8);--red:#d7263d;--gold:#f2c14e;--line:light-dark(#dfe6e2,#24392d)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--felt);color:var(--ink);font:16px/1.55 -apple-system,"PingFang TC","Noto Sans TC","Microsoft JhengHei",system-ui,sans-serif;overflow-x:clip}
+.wrap{max-width:820px;margin:0 auto;padding:max(16px,env(safe-area-inset-top)) max(4vw,12px,env(safe-area-inset-right)) calc(60px + env(safe-area-inset-bottom))}
+#upd{position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));z-index:9;display:none;background:var(--gold);color:#3a2a00;border:0;border-radius:12px;min-height:48px;font-size:17px;box-shadow:0 6px 20px rgba(0,0,0,.4)}#upd.on{display:block}
+h1{color:#fff;font-size:28px;line-height:1.1;margin:6px 0 4px;font-weight:900}
+.sub{color:#cfe6d8;font-size:14px;margin:0 0 14px}
+.board{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.pc{background:var(--card);border-radius:12px;padding:10px 8px 12px;text-align:center;box-shadow:0 6px 0 var(--felt2),0 10px 20px rgba(0,0,0,.25);position:relative}
+.pc .suit{position:absolute;top:6px;left:8px;font-size:15px}
+.pc input{width:100%;border:0;background:transparent;color:var(--ink);font:700 16px -apple-system,"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;text-align:center;padding:4px 2px;border-bottom:1px dashed var(--line)}
+.pc .pts{font-size:clamp(26px,7vw,40px);font-weight:900;line-height:1.1;margin-top:6px}
+.pc .money{font-size:15px;font-weight:700;white-space:nowrap}
+.pos{color:#138a4f}.neg{color:var(--red)}
+.panel{background:var(--card);border-radius:14px;padding:16px;margin-top:18px}
+.panel h2{font-size:19px;margin:0 0 4px}
+.hint{font-size:13px;color:var(--mute);margin:0 0 10px}
+.status{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:6px}
+.status div{display:flex;flex-direction:column;gap:4px}
+.status b{font-size:14px;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+select,input[type=number]{font:16px -apple-system,"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;min-height:40px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);padding:4px 6px;width:100%}
+.row{border-top:1px solid var(--line);padding-top:12px;margin-top:12px}
+.row h3{font-size:16px;margin:0 0 8px;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.row h3 button{font-size:13px;min-height:32px;padding:2px 10px}
+.rk{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.rk .cell{display:flex;flex-direction:column;gap:4px}
+.pick{position:relative;min-height:52px;border-radius:10px;border:2px solid var(--line);background:var(--card);color:var(--ink);font:700 15px -apple-system,"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;cursor:pointer;padding:4px}
+.pick[data-r="1"]{background:#ffd23f;border-color:#ffb800;color:#3a2a00}
+.pick[data-r="2"]{background:#5ad1f2;border-color:#1fa8d1;color:#052b38}
+.pick[data-r="3"]{background:#b9835a;border-color:#946243;color:#fff}
+.pick[data-r="4"]{background:#6f7d89;border-color:#55616c;color:#fff}
+.pick[data-r]::after{content:"第" attr(data-r);position:absolute;top:-9px;right:-6px;background:#10201a;color:#fff;font-size:12px;border-radius:9px;padding:0 6px;line-height:18px}
+.pick:disabled{opacity:.35;cursor:default}
+.cell select{font-size:14px;min-height:36px}
+.tie{font-size:13px;min-height:32px;padding:2px 6px;border-radius:8px}
+.tie[aria-pressed=true]{background:var(--gold);color:#3a2a00}
+button{font:700 16px -apple-system,"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;border-radius:10px;border:0;min-height:44px;padding:8px 16px;cursor:pointer;background:var(--line);color:var(--ink)}
+button.go{background:var(--red);color:#fff}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.prev{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:14px 0 10px;text-align:center}
+.prev div{background:light-dark(#f3f7f5,#0f1d16);border-radius:10px;padding:8px 4px}
+.prev .n{font-size:13px;color:var(--mute)}.prev .v{font-size:24px;font-weight:900}
+.tags{font-size:14px;margin:0 0 10px;min-height:1.4em}
+.tag{display:inline-block;background:var(--gold);color:#3a2a00;border-radius:6px;padding:0 8px;margin:2px 4px 2px 0;font-weight:700}
+.err{color:var(--red);font-size:14px;font-weight:700;min-height:1.4em}
+.actions{display:flex;gap:10px;flex-wrap:wrap}
+table{width:100%;border-collapse:collapse;font-size:15px}
+th,td{padding:6px 4px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+td .x{background:none;min-height:32px;padding:0 8px;color:var(--red)}
+.scroll{overflow-x:auto}
+.set{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.set label{font-size:14px;display:flex;flex-direction:column;gap:4px}
+details summary{cursor:pointer;font-weight:700;font-size:17px;min-height:32px}
+.rules{font-size:14px;line-height:1.7}.rules p{margin:6px 0}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;padding:20px}
+.modal.on{display:flex}.modal>div{background:var(--card);border-radius:14px;padding:20px;max-width:360px}
+@media(max-width:600px){.board,.status,.rk,.prev{gap:6px}.pc{padding:8px 4px}.pick{font-size:14px}h1{font-size:24px}}
+@media(prefers-reduced-motion:no-preference){.pc .pts{transition:color .3s}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>十三支計分器</h1>
+<p class="sub">4 人 · 頭 3 / 中 5 / 尾 5 · 點名字修改玩家名稱</p>
+<div class="board" id="board"></div>
+
+<div class="panel">
+<h2>第 <span id="rno">1</span> 局</h2>
+<p class="hint">先選每人狀態，再依每墩由<b>大到小</b>點名字（點已排的人可重排）。兩人一樣大就按「＝ 平上一名」算平手（push，該墩不輸不贏）。有特殊牌型加分的，在名字下方選牌型。</p>
+<div class="status" id="status"></div>
+<div id="rows"></div>
+<div class="prev" id="prev"></div>
+<div class="tags" id="tags"></div>
+<div class="err" id="err"></div>
+<div class="actions"><button class="go" id="save">記錄這一局</button><button id="clear">清除本局</button></div>
+</div>
+
+<div class="panel">
+<h2>每局紀錄</h2>
+<div class="scroll"><table id="hist"></table></div>
+<div class="actions" style="margin-top:12px"><button id="reset">重新開始（全部歸零）</button></div>
+</div>
+
+<div class="panel">
+<details><summary>設定（金額 / 打槍 / 加分）</summary>
+<div class="set" style="margin-top:10px">
+<label>每人本金 $<input type="number" id="s_start" step="1" min="0"></label>
+<label>每分（每道）$<input type="number" id="s_unit" step="0.05" min="0"></label>
+<label>打槍倍數<input type="number" id="s_gun" step="1" min="1"></label>
+<label>全壘打再乘<input type="number" id="s_hr" step="1" min="1"></label>
+<label>頭墩三條<input type="number" id="b_h_three" min="1"></label>
+<label>中墩葫蘆<input type="number" id="b_m_full" min="1"></label>
+<label>中墩鐵支<input type="number" id="b_m_four" min="1"></label>
+<label>中墩同花順<input type="number" id="b_m_sf" min="1"></label>
+<label>尾墩鐵支<input type="number" id="b_t_four" min="1"></label>
+<label>尾墩同花順<input type="number" id="b_t_sf" min="1"></label>
+</div>
+<p class="hint" style="margin-top:10px">各家規則不同，開打前大家先講好，這裡改了會重新計算所有紀錄。</p>
+</details>
+</div>
+
+<div class="panel rules">
+<details><summary>計分規則（本程式用的算法）</summary>
+<p><b>比牌：</b>每兩人之間，頭對頭、中對中、尾對尾各比一次，每墩贏 1 道（有加分牌型就贏該墩的加分數）。4 人共 6 組對決。</p>
+<p><b>平手（push）：</b>同一墩兩人牌一樣大 → 這墩兩人不輸不贏、0 道；有平手就不算三墩全贏，不能打槍。</p>
+<p><b>打槍：</b>三墩全贏同一個人 → 對他的分數 ×2。</p>
+<p><b>全壘打：</b>同一局打槍其他 3 家 → 他這局所有分數再 ×2（3 墩全贏、無加分時，每家輸 12 道）。</p>
+<p><b>相公 / 倒水：</b>排錯（頭比中大、中比尾大）→ 當作被每家打槍（每家贏他 3×2＝6 道）。</p>
+<p><b>特殊牌型（報到）：</b>例如一條龍、六對半、三同花、三順子，直接跟每家收你們講好的分數，不參加比墩。</p>
+<p><b>墩內加分（預設）：</b>頭墩三條 3、中墩葫蘆 2、中墩鐵支 8、中墩同花順 10、尾墩鐵支 4、尾墩同花順 5。只有贏了那墩才拿加分。</p>
+</details>
+</div>
+</div>
+
+<button id="upd" type="button">有新版本，點這裡更新</button>
+<div class="modal" id="modal"><div><p id="mtext" style="margin-top:0">確定要清除所有紀錄嗎？</p><div class="actions"><button class="go" id="mok">確定</button><button id="mno">取消</button></div></div></div>
+
+<script>
+{
+const SUITS=['♠','♥','♣','♦'],ROWS=[['頭墩','h'],['中墩','m'],['尾墩','t']];
+const HANDS={h:[['','一般'],['three','三條']],m:[['','一般'],['full','葫蘆'],['four','鐵支'],['sf','同花順']],t:[['','一般'],['four','鐵支'],['sf','同花順']]};
+const DEF={names:['Johnny','玩家2','玩家3','玩家4'],start:15,unit:0.3,gun:2,hr:2,bonus:{h_three:3,m_full:2,m_four:8,m_sf:10,t_four:4,t_sf:5},rounds:[]};
+let S;try{S=JSON.parse(localStorage.getItem('13zhi'))}catch(e){}
+if(!S||!S.names)S=JSON.parse(JSON.stringify(DEF));
+try{const nn=JSON.parse(localStorage.getItem('13zhi_names'));if(Array.isArray(nn)&&nn.length===4)S.names=nn.map((x,i)=>String(x||('玩家'+(i+1))))}catch(e){}
+const save=()=>{try{localStorage.setItem('13zhi',JSON.stringify(S));localStorage.setItem('13zhi_names',JSON.stringify(S.names))}catch(e){}};
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const $=id=>document.getElementById(id);
+const fmt=n=>(n<0?'-$':'$')+Math.abs(n).toFixed(2);
+const sgn=n=>n>0?'+'+n:''+n;
+let E;
+const newEntry=()=>({st:['n','n','n','n'],sp:[3,3,3,3],rank:{h:[],m:[],t:[]},hand:{h:['','','',''],m:['','','',''],t:['','','','']},tie:{h:[],m:[],t:[]}});
+const lv=(e,r)=>{const L={},tie=(e.tie&&e.tie[r])||[];let l=0;e.rank[r].forEach((p,k)=>{if(k>0&&!tie.includes(p))l++;L[p]=l});return L};
+E=newEntry();
+
+function compute(e){
+  const P=[[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]],G=[[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]];
+  const val=(r,w)=>{const k=e.hand[r][w];return k?(+S.bonus[r+'_'+k]||1):1};
+  for(let i=0;i<4;i++)for(let j=i+1;j<4;j++){
+    const a=e.st[i],b=e.st[j];let d=0;
+    if(a==='sp'||b==='sp'){d=(a==='sp'?+e.sp[i]:0)-(b==='sp'?+e.sp[j]:0)}
+    else if(a==='foul'&&b==='foul'){d=0}
+    else if(a==='foul'){d=-3*S.gun;G[j][i]=1}
+    else if(b==='foul'){d=3*S.gun;G[i][j]=1}
+    else{let wi=0,wj=0;for(const[,r]of ROWS){const L=lv(e,r),li=L[i],lj=L[j];if(li<lj){d+=val(r,i);wi++}else if(li>lj){d-=val(r,j);wj++}}
+      if(wi===3){d*=S.gun;G[i][j]=1}else if(wj===3){d*=S.gun;G[j][i]=1}}
+    P[i][j]=d;P[j][i]=-d;
+  }
+  const tags=[];
+  for(const[lab,r]of ROWS){const tie=(e.tie&&e.tie[r])||[];e.rank[r].forEach((p,k)=>{if(k>0&&tie.includes(p))tags.push(lab+' '+S.names[e.rank[r][k-1]]+'＝'+S.names[p]+' 平手')})}
+  for(let i=0;i<4;i++)for(let j=0;j<4;j++)if(G[i][j])tags.push(S.names[i]+' 打槍 '+S.names[j]);
+  for(let i=0;i<4;i++){if([0,1,2,3].every(k=>k===i||G[i][k])){tags.push(S.names[i]+' 全壘打！');for(let k=0;k<4;k++)if(k!==i){P[i][k]*=S.hr;P[k][i]*=S.hr}}}
+  e.st.forEach((s,i)=>{if(s==='foul')tags.push(S.names[i]+' 相公');if(s==='sp')tags.push(S.names[i]+' 特殊牌型 '+e.sp[i]+' 道')});
+  return{pts:P.map(r=>r.reduce((a,b)=>a+b,0)),tags};
+}
+const normals=()=>[0,1,2,3].filter(i=>E.st[i]==='n');
+function valid(){const n=normals();if(n.length<2)return true;return ROWS.every(([,r])=>E.rank[r].length===n.length)}
+function totals(){const t=[0,0,0,0];S.rounds.forEach(r=>{const c=compute(r);c.pts.forEach((p,i)=>t[i]+=p)});return t}
+
+function renderBoard(){
+  const t=totals();
+  $('board').innerHTML=S.names.map((n,i)=>{const m=S.start+t[i]*S.unit;return`<div class="pc"><span class="suit" style="color:${i%2?'var(--red)':'var(--ink)'}">${SUITS[i]}</span><input id="nm${i}" value="${esc(n)}" aria-label="玩家${i+1}名字"><div class="pts ${t[i]>0?'pos':t[i]<0?'neg':''}">${sgn(t[i])}</div><div class="money ${m<0?'neg':''}">${fmt(m)}</div></div>`}).join('');
+  S.names.forEach((_,i)=>{$('nm'+i).onchange=ev=>{S.names[i]=ev.target.value.trim()||('玩家'+(i+1));save();renderAll()}});
+}
+function renderEntry(){
+  $('rno').textContent=S.rounds.length+1;
+  $('status').innerHTML=S.names.map((n,i)=>`<div><b>${esc(n)}</b><select id="st${i}"><option value="n">一般</option><option value="foul">相公/倒水</option><option value="sp">特殊牌型</option></select>${E.st[i]==='sp'?`<input type="number" id="sp${i}" min="1" value="${E.sp[i]}" aria-label="特殊牌型分數">`:''}</div>`).join('');
+  S.names.forEach((_,i)=>{const s=$('st'+i);s.value=E.st[i];s.onchange=()=>{E.st[i]=s.value;for(const[,r]of ROWS){E.rank[r]=E.rank[r].filter(k=>E.st[k]==='n');E.tie[r]=E.tie[r].filter(k=>E.rank[r].indexOf(k)>0)}renderEntry()};
+    const p=$('sp'+i);if(p)p.oninput=()=>{E.sp[i]=Math.max(0,+p.value||0);renderPrev()}});
+  const n=normals();
+  $('rows').innerHTML=n.length<2?'<p class="hint">一般玩家少於 2 人，不用比墩。</p>':ROWS.map(([lab,r])=>`<div class="row"><h3>${lab}（由大到小點）<button data-clr="${r}">重排</button></h3><div class="rk">${S.names.map((nm,i)=>{const on=E.st[i]==='n',p=E.rank[r].indexOf(i),L=lv(E,r),td=E.tie[r].includes(i);return`<div class="cell"><button class="pick" data-row="${r}" data-p="${i}" ${p>=0?`data-r="${L[i]+1}"`:''} ${on?'':'disabled'}>${esc(nm)}</button>${on&&p>=1?`<button class="tie" data-tr="${r}" data-tp="${i}" aria-pressed="${td}">${td?'✓ 平手':'＝ 平上一名'}</button>`:''}${on?`<select data-hr="${r}" data-hp="${i}" aria-label="${esc(nm)} ${lab}牌型">${HANDS[r].map(([k,t])=>`<option value="${k}" ${E.hand[r][i]===k?'selected':''}>${t}${k?' '+S.bonus[r+'_'+k]:''}</option>`).join('')}</select>`:''}</div>`}).join('')}</div></div>`).join('');
+  document.querySelectorAll('.pick').forEach(b=>b.onclick=()=>{const r=b.dataset.row,p=+b.dataset.p,a=E.rank[r],x=a.indexOf(p);
+    if(x>=0)a.splice(x);else{a.push(p);const rest=normals().filter(k=>!a.includes(k));if(rest.length===1)a.push(rest[0])}E.tie[r]=E.tie[r].filter(k=>a.indexOf(k)>0);renderEntry()});
+  document.querySelectorAll('.tie').forEach(b=>b.onclick=()=>{const r=b.dataset.tr,p=+b.dataset.tp,t=E.tie[r],x=t.indexOf(p);if(x>=0)t.splice(x,1);else t.push(p);renderEntry()});
+  document.querySelectorAll('[data-clr]').forEach(b=>b.onclick=()=>{E.rank[b.dataset.clr]=[];E.tie[b.dataset.clr]=[];renderEntry()});
+  document.querySelectorAll('[data-hr]').forEach(s=>s.onchange=()=>{E.hand[s.dataset.hr][+s.dataset.hp]=s.value;renderPrev()});
+  renderPrev();
+}
+function renderPrev(){
+  const ok=valid();$('err').textContent=ok?'':'還有墩沒排完';
+  const c=ok?compute(E):{pts:[0,0,0,0],tags:[]};
+  $('prev').innerHTML=S.names.map((n,i)=>`<div><div class="n">${esc(n)}</div><div class="v ${c.pts[i]>0?'pos':c.pts[i]<0?'neg':''}">${ok?sgn(c.pts[i]):'–'}</div><div class="n">${ok?fmt(c.pts[i]*S.unit):''}</div></div>`).join('');
+  $('tags').innerHTML=c.tags.map(t=>`<span class="tag">${esc(t)}</span>`).join('');
+}
+function renderHist(){
+  if(!S.rounds.length){$('hist').innerHTML='<tr><td>還沒有紀錄</td></tr>';return}
+  const t=totals();
+  $('hist').innerHTML=`<tr><th>局</th>${S.names.map(n=>`<th>${esc(n)}</th>`).join('')}<th></th></tr>`+
+   S.rounds.map((r,k)=>{const c=compute(r);return`<tr><td>${k+1}</td>${c.pts.map(p=>`<td class="${p>0?'pos':p<0?'neg':''}">${sgn(p)}</td>`).join('')}<td><button class="x" data-del="${k}" aria-label="刪除第${k+1}局">✕</button></td></tr>`}).reverse().join('')+
+   `<tr><th>總分</th>${t.map(p=>`<th>${sgn(p)}</th>`).join('')}<th></th></tr><tr><th>輸贏</th>${t.map(p=>`<th class="${p>0?'pos':p<0?'neg':''}">${fmt(p*S.unit)}</th>`).join('')}<th></th></tr>`;
+  document.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>ask(`刪除第 ${+b.dataset.del+1} 局？`,()=>{S.rounds.splice(+b.dataset.del,1);save();renderAll()}));
+}
+function renderSet(){
+  $('s_start').value=S.start;$('s_unit').value=S.unit;$('s_gun').value=S.gun;$('s_hr').value=S.hr;
+  for(const k in S.bonus)$('b_'+k).value=S.bonus[k];
+}
+function renderAll(){renderBoard();renderEntry();renderHist()}
+let cb=null;
+function ask(t,f){$('mtext').textContent=t;cb=f;$('modal').classList.add('on')}
+$('mok').onclick=()=>{$('modal').classList.remove('on');cb&&cb()};
+$('mno').onclick=()=>$('modal').classList.remove('on');
+$('save').onclick=()=>{if(!valid()){$('err').textContent='還有墩沒排完，排完才能記錄';return}S.rounds.push(JSON.parse(JSON.stringify(E)));E=newEntry();save();renderAll();window.scrollTo({top:0,behavior:'smooth'})};
+$('clear').onclick=()=>{E=newEntry();renderEntry()};
+$('reset').onclick=()=>ask('確定清除所有局數？（玩家名字和設定會保留）',()=>{S.rounds=[];E=newEntry();save();renderAll()});
+[['s_start','start'],['s_unit','unit'],['s_gun','gun'],['s_hr','hr']].forEach(([id,k])=>$(id).onchange=()=>{const v=parseFloat($(id).value);if(!isNaN(v)&&v>=0){S[k]=v;save();renderAll()}});
+Object.keys(S.bonus).forEach(k=>$('b_'+k).onchange=()=>{const v=parseInt($('b_'+k).value);if(v>=1){S.bonus[k]=v;save();renderAll()}});
+renderSet();renderAll();
+}
+</script>
+<script>
+if('serviceWorker' in navigator){
+  const b=document.getElementById('upd');let reloading=false,asked=false;
+  const offer=w=>{b.classList.add('on');b.onclick=()=>{asked=true;w.postMessage('SKIP_WAITING')}};
+  navigator.serviceWorker.addEventListener('controllerchange',()=>{if(reloading||!asked)return;reloading=true;location.reload()});
+  navigator.serviceWorker.register('sw.js').then(reg=>{
+    if(reg.waiting&&navigator.serviceWorker.controller)offer(reg.waiting);
+    reg.addEventListener('updatefound',()=>{const w=reg.installing;w&&w.addEventListener('statechange',()=>{if(w.state==='installed'&&navigator.serviceWorker.controller)offer(w)})});
+    document.addEventListener('visibilitychange',()=>{if(!document.hidden)reg.update().catch(()=>{})});
+  }).catch(()=>{});
+}
+</script>
+</body>
+</html>
