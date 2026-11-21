@@ -78,46 +78,111 @@ details summary{cursor:pointer;font-weight:700;font-size:17px;min-height:32px}
 .modal.on{display:flex}.modal>div{background:var(--card);border-radius:14px;padding:20px;max-width:360px}
 @media(max-width:600px){.board,.status,.rk,.prev{gap:6px}.pc{padding:8px 4px}.pick{font-size:14px}h1{font-size:24px}}
 @media(prefers-reduced-motion:no-preference){.pc .pts{transition:color .3s}}
+/* 大字大按鈕：名字、分數 ≥ 20pt，按鈕 ≥ 48pt 高 */
+.pc input{font-size:20pt;text-overflow:ellipsis}
+.pc .pts{font-size:clamp(24pt,8vw,36pt)}
+.pc .money{font-size:20pt}
+.status b{font-size:20pt}
+.pick{font-size:20pt;min-height:48pt;line-height:1.15;overflow-wrap:anywhere}
+.pick[data-r]::after{font-size:12pt;line-height:22px;top:-12px}
+.prev .n{font-size:20pt}.prev .v{font-size:28pt}
+.tags{font-size:14pt}.err{font-size:14pt}
+table{font-size:20pt}
+button,select,input[type=number]{min-height:48pt;font-size:16pt}
+.row h3{font-size:16pt;align-items:center}
+.row h3 button,.tie,td .x,.cell select{min-height:48pt;font-size:14pt}
+.actions button{flex:1 1 180px}
+details summary{min-height:48pt;display:flex;align-items:center;font-size:16pt}
+.set label{font-size:14pt}
+.modal>div{max-width:440px;width:100%}
+#mtext{font-size:18pt;white-space:pre-line;line-height:1.5}
+.modal .actions button{flex:1}
+#status{display:none}
+details summary{font-size:20pt}
+.scrollto{scroll-margin-top:240px}
+.rvsec{border-top:1px solid var(--line);padding-top:10px;margin-top:10px}
+.rvsec h3{font-size:16pt;margin:0 0 6px}
+.rvl{display:flex;align-items:center;gap:10px;padding:4px 0;font-size:20pt}
+.rvl small{font-size:14pt;font-weight:400;color:var(--mute)}
+.rb{display:inline-block;min-width:3.4em;text-align:center;border-radius:10px;padding:2px 8px;font-size:16pt;font-weight:700;background:var(--line);color:var(--ink)}
+.rb[data-r="1"]{background:#ffd23f;color:#3a2a00}
+.rb[data-r="2"]{background:#5ad1f2;color:#052b38}
+.rb[data-r="3"]{background:#b9835a;color:#fff}
+.rb[data-r="4"]{background:#6f7d89;color:#fff}
+.rn{min-height:48pt;font-size:16pt;padding:0 12px}
+tr.sel td{background:rgba(242,193,78,.28)}
+tr.ed td{border-bottom:3px dashed var(--red)}
+.edtag{color:var(--red);font-size:16pt;margin-left:8px}
+.yao{color:#d98e00;font-size:14pt;margin-right:4px}
+.rules,.rules p,.rules details summary{font-size:20pt;line-height:1.6}
+.s1 label{display:flex;flex-direction:column;gap:4px;font-size:14pt}
+.unitline{font-size:14pt;margin:10px 0 6px}
+.slist{list-style:none;margin:8px 0 0;padding:0}
+.slist li{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:6px 0;border-top:1px solid var(--line);font-size:14pt}
+.slist input{width:110px;text-align:center}
+.slist input:disabled{opacity:.45}
+/* 記分板固定在上方 */
+.board{position:sticky;top:0;z-index:10;background:var(--felt);padding:8px 0 12px;margin-top:0}
+.pc{box-shadow:0 4px 0 var(--felt2)}
+@media(max-width:600px){
+.board{gap:8px;padding:6px 0 10px}
+.pc{display:grid;grid-template-columns:auto 1fr;align-items:baseline;column-gap:6px;padding:6px 8px 8px}
+.pc .suit{display:none}
+.pc input{grid-column:1/-1;padding:0 2px}
+.pc .pts{margin-top:0;text-align:left}
+.pc .money{text-align:right;font-size:16pt}
+}
+@media(max-width:600px){.board,.status,.rk,.prev{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.rk{row-gap:18px}}
 </style>
 </head>
 <body>
 <div class="wrap">
 <h1>十三支計分器</h1>
-<p class="sub">4 人 · 頭 3 / 中 5 / 尾 5 · 點名字修改玩家名稱</p>
 <div class="board" id="board"></div>
 
-<div class="panel">
-<h2>第 <span id="rno">1</span> 局</h2>
-<p class="hint">先選每人狀態，再依每墩由<b>大到小</b>點名字（點已排的人可重排）。兩人一樣大就按「＝ 平上一名」算平手（push，該墩不輸不贏）。有特殊牌型加分的，在名字下方選牌型。</p>
+<div class="panel scrollto" id="entry">
+<h2>第 <span id="rno">1</span> 局<span id="edtag" class="edtag"></span></h2>
+<p class="hint">每墩由<b>大到小</b>點名字。同大按「＝ 平上一名」。</p>
 <div class="status" id="status"></div>
 <div id="rows"></div>
 <div class="prev" id="prev"></div>
 <div class="tags" id="tags"></div>
 <div class="err" id="err"></div>
-<div class="actions"><button class="go" id="save">記錄這一局</button><button id="clear">清除本局</button></div>
+<div class="actions"><button class="go" id="save">記錄這一局</button><button id="clear">清除本局</button><button id="lastbtn">回顧上一局</button></div>
+</div>
+
+<div class="panel scrollto" id="review" hidden>
+<h2 id="rvt"></h2>
+<div id="rvbody"></div>
+<div class="prev" id="rvprev"></div>
+<div class="tags" id="rvtags"></div>
+<div class="actions"><button class="go" id="rvedit">修改這局</button><button id="rvclose">關閉</button></div>
 </div>
 
 <div class="panel">
 <h2>每局紀錄</h2>
+<p class="hint">點「第N局」可回顧每墩排名。玩家旁的 ★ = 該局有妖怪牌（三條、葫蘆、鐵支、同花順）。</p>
 <div class="scroll"><table id="hist"></table></div>
 <div class="actions" style="margin-top:12px"><button id="reset">重新開始（全部歸零）</button></div>
 </div>
 
 <div class="panel">
 <details><summary>設定（金額 / 打槍 / 加分）</summary>
-<div class="set" style="margin-top:10px">
-<label>每人本金 $<input type="number" id="s_start" step="1" min="0"></label>
-<label>每分（每道）$<input type="number" id="s_unit" step="0.05" min="0"></label>
-<label>打槍倍數<input type="number" id="s_gun" step="1" min="1"></label>
-<label>全壘打再乘<input type="number" id="s_hr" step="1" min="1"></label>
-<label>頭墩三條<input type="number" id="b_h_three" min="1"></label>
-<label>中墩葫蘆<input type="number" id="b_m_full" min="1"></label>
-<label>中墩鐵支<input type="number" id="b_m_four" min="1"></label>
-<label>中墩同花順<input type="number" id="b_m_sf" min="1"></label>
-<label>尾墩鐵支<input type="number" id="b_t_four" min="1"></label>
-<label>尾墩同花順<input type="number" id="b_t_sf" min="1"></label>
+<div class="s1" style="margin-top:10px">
+<label>每人本金 $<input type="number" id="s_start" step="0.01" min="0" max="1000" inputmode="decimal"></label>
+<p class="unitline">每分（每道）自動計算：<b>$<span id="s_unit">0.30</span></b>（本金 ÷ 50）</p>
 </div>
-<p class="hint" style="margin-top:10px">各家規則不同，開打前大家先講好，這裡改了會重新計算所有紀錄。</p>
+<ul class="slist">
+<li><span>打槍倍數</span><input type="number" id="s_gun" step="1" min="1"></li>
+<li><span>全壘打再乘</span><input type="number" id="s_hr" step="1" min="1"></li>
+<li><span>頭墩三條</span><input type="number" id="b_h_three" min="1"></li>
+<li><span>中墩葫蘆</span><input type="number" id="b_m_full" min="1"></li>
+<li><span>中墩鐵支</span><input type="number" id="b_m_four" min="1"></li>
+<li><span>中墩同花順</span><input type="number" id="b_m_sf" min="1"></li>
+<li><span>尾墩鐵支</span><input type="number" id="b_t_four" min="1"></li>
+<li><span>尾墩同花順</span><input type="number" id="b_t_sf" min="1"></li>
+</ul>
+<p class="hint" style="margin-top:10px">倍數和加分都按正常遊戲規則。記錄第 1 局之後，倍數和加分就鎖住不能改，只有本金可以調整；全部歸零後才能再改倍數。</p>
 </details>
 </div>
 
@@ -127,8 +192,7 @@ details summary{cursor:pointer;font-weight:700;font-size:17px;min-height:32px}
 <p><b>平手（push）：</b>同一墩兩人牌一樣大 → 這墩兩人不輸不贏、0 道；有平手就不算三墩全贏，不能打槍。</p>
 <p><b>打槍：</b>三墩全贏同一個人 → 對他的分數 ×2。</p>
 <p><b>全壘打：</b>同一局打槍其他 3 家 → 他這局所有分數再 ×2（3 墩全贏、無加分時，每家輸 12 道）。</p>
-<p><b>相公 / 倒水：</b>排錯（頭比中大、中比尾大）→ 當作被每家打槍（每家贏他 3×2＝6 道）。</p>
-<p><b>特殊牌型（報到）：</b>例如一條龍、六對半、三同花、三順子，直接跟每家收你們講好的分數，不參加比墩。</p>
+<p><b>設定限制：</b>所有倍數和加分都按正常遊戲規則。遊戲中途（已有紀錄）不能亂改倍數，只有本金可以調整（上限 $1000）。全部歸零後才能再改倍數。</p>
 <p><b>墩內加分（預設）：</b>頭墩三條 3、中墩葫蘆 2、中墩鐵支 8、中墩同花順 10、尾墩鐵支 4、尾墩同花順 5。只有贏了那墩才拿加分。</p>
 </details>
 </div>
@@ -141,7 +205,7 @@ details summary{cursor:pointer;font-weight:700;font-size:17px;min-height:32px}
 {
 const SUITS=['♠','♥','♣','♦'],ROWS=[['頭墩','h'],['中墩','m'],['尾墩','t']];
 const HANDS={h:[['','一般'],['three','三條']],m:[['','一般'],['full','葫蘆'],['four','鐵支'],['sf','同花順']],t:[['','一般'],['four','鐵支'],['sf','同花順']]};
-const DEF={names:['Johnny','玩家2','玩家3','玩家4'],start:15,unit:0.3,gun:2,hr:2,bonus:{h_three:3,m_full:2,m_four:8,m_sf:10,t_four:4,t_sf:5},rounds:[]};
+const DEF={names:['玩家1','玩家2','玩家3','玩家4'],start:15,unit:0.3,gun:2,hr:2,bonus:{h_three:3,m_full:2,m_four:8,m_sf:10,t_four:4,t_sf:5},rounds:[]};
 let S;try{S=JSON.parse(localStorage.getItem('13zhi'))}catch(e){}
 if(!S||!S.names)S=JSON.parse(JSON.stringify(DEF));
 try{const nn=JSON.parse(localStorage.getItem('13zhi_names'));if(Array.isArray(nn)&&nn.length===4)S.names=nn.map((x,i)=>String(x||('玩家'+(i+1))))}catch(e){}
@@ -154,6 +218,9 @@ let E;
 const newEntry=()=>({st:['n','n','n','n'],sp:[3,3,3,3],rank:{h:[],m:[],t:[]},hand:{h:['','','',''],m:['','','',''],t:['','','','']},tie:{h:[],m:[],t:[]}});
 const lv=(e,r)=>{const L={},tie=(e.tie&&e.tie[r])||[];let l=0;e.rank[r].forEach((p,k)=>{if(k>0&&!tie.includes(p))l++;L[p]=l});return L};
 E=newEntry();
+let rev=null,editIdx=-1,draft=null;
+const clone=o=>JSON.parse(JSON.stringify(o));
+const yao=(r,i)=>r.hand&&['h','m','t'].some(k=>r.hand[k]&&r.hand[k][i]);
 
 function compute(e){
   const P=[[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]],G=[[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]];
@@ -181,16 +248,16 @@ function totals(){const t=[0,0,0,0];S.rounds.forEach(r=>{const c=compute(r);c.pt
 
 function renderBoard(){
   const t=totals();
-  $('board').innerHTML=S.names.map((n,i)=>{const m=S.start+t[i]*S.unit;return`<div class="pc"><span class="suit" style="color:${i%2?'var(--red)':'var(--ink)'}">${SUITS[i]}</span><input id="nm${i}" value="${esc(n)}" aria-label="玩家${i+1}名字"><div class="pts ${t[i]>0?'pos':t[i]<0?'neg':''}">${sgn(t[i])}</div><div class="money ${m<0?'neg':''}">${fmt(m)}</div></div>`}).join('');
+  $('board').innerHTML=S.names.map((n,i)=>{const m=Math.round(t[i]*S.unit*100)/100;return`<div class="pc"><span class="suit" style="color:${i%2?'var(--red)':'var(--ink)'}">${SUITS[i]}</span><input id="nm${i}" value="${esc(n)}" aria-label="玩家${i+1}名字"><div class="pts ${t[i]>0?'pos':t[i]<0?'neg':''}">${sgn(t[i])}</div><div class="money ${m>0?'pos':m<0?'neg':''}">${m>0?'+':''}${fmt(m)}</div></div>`}).join('');
   S.names.forEach((_,i)=>{$('nm'+i).onchange=ev=>{S.names[i]=ev.target.value.trim()||('玩家'+(i+1));save();renderAll()}});
 }
 function renderEntry(){
-  $('rno').textContent=S.rounds.length+1;
+  $('rno').textContent=editIdx>=0?editIdx+1:S.rounds.length+1;$('edtag').textContent=editIdx>=0?'（修改中）':'';$('save').textContent=editIdx>=0?'確認修改':'記錄這一局';$('clear').textContent=editIdx>=0?'取消修改':'清除本局';
   $('status').innerHTML=S.names.map((n,i)=>`<div><b>${esc(n)}</b><select id="st${i}"><option value="n">一般</option><option value="foul">相公/倒水</option><option value="sp">特殊牌型</option></select>${E.st[i]==='sp'?`<input type="number" id="sp${i}" min="1" value="${E.sp[i]}" aria-label="特殊牌型分數">`:''}</div>`).join('');
   S.names.forEach((_,i)=>{const s=$('st'+i);s.value=E.st[i];s.onchange=()=>{E.st[i]=s.value;for(const[,r]of ROWS){E.rank[r]=E.rank[r].filter(k=>E.st[k]==='n');E.tie[r]=E.tie[r].filter(k=>E.rank[r].indexOf(k)>0)}renderEntry()};
     const p=$('sp'+i);if(p)p.oninput=()=>{E.sp[i]=Math.max(0,+p.value||0);renderPrev()}});
   const n=normals();
-  $('rows').innerHTML=n.length<2?'<p class="hint">一般玩家少於 2 人，不用比墩。</p>':ROWS.map(([lab,r])=>`<div class="row"><h3>${lab}（由大到小點）<button data-clr="${r}">重排</button></h3><div class="rk">${S.names.map((nm,i)=>{const on=E.st[i]==='n',p=E.rank[r].indexOf(i),L=lv(E,r),td=E.tie[r].includes(i);return`<div class="cell"><button class="pick" data-row="${r}" data-p="${i}" ${p>=0?`data-r="${L[i]+1}"`:''} ${on?'':'disabled'}>${esc(nm)}</button>${on&&p>=1?`<button class="tie" data-tr="${r}" data-tp="${i}" aria-pressed="${td}">${td?'✓ 平手':'＝ 平上一名'}</button>`:''}${on?`<select data-hr="${r}" data-hp="${i}" aria-label="${esc(nm)} ${lab}牌型">${HANDS[r].map(([k,t])=>`<option value="${k}" ${E.hand[r][i]===k?'selected':''}>${t}${k?' '+S.bonus[r+'_'+k]:''}</option>`).join('')}</select>`:''}</div>`}).join('')}</div></div>`).join('');
+  $('rows').innerHTML=n.length<2?'<p class="hint">一般玩家少於 2 人，不用比墩。</p>':ROWS.map(([lab,r])=>`<div class="row"><h3>${lab}（由大到小點）</h3><div class="rk">${S.names.map((nm,i)=>{const on=E.st[i]==='n',p=E.rank[r].indexOf(i),L=lv(E,r),td=E.tie[r].includes(i);return`<div class="cell"><button class="pick" data-row="${r}" data-p="${i}" ${p>=0?`data-r="${L[i]+1}"`:''} ${on?'':'disabled'}>${esc(nm)}</button>${on&&p>=1?`<button class="tie" data-tr="${r}" data-tp="${i}" aria-pressed="${td}">${td?'✓ 平手':'＝ 平上一名'}</button>`:''}${on?`<select data-hr="${r}" data-hp="${i}" aria-label="${esc(nm)} ${lab}牌型">${HANDS[r].map(([k,t])=>`<option value="${k}" ${E.hand[r][i]===k?'selected':''}>${t}${k?' '+S.bonus[r+'_'+k]:''}</option>`).join('')}</select>`:''}</div>`}).join('')}</div></div>`).join('');
   document.querySelectorAll('.pick').forEach(b=>b.onclick=()=>{const r=b.dataset.row,p=+b.dataset.p,a=E.rank[r],x=a.indexOf(p);
     if(x>=0)a.splice(x);else{a.push(p);const rest=normals().filter(k=>!a.includes(k));if(rest.length===1)a.push(rest[0])}E.tie[r]=E.tie[r].filter(k=>a.indexOf(k)>0);renderEntry()});
   document.querySelectorAll('.tie').forEach(b=>b.onclick=()=>{const r=b.dataset.tr,p=+b.dataset.tp,t=E.tie[r],x=t.indexOf(p);if(x>=0)t.splice(x,1);else t.push(p);renderEntry()});
@@ -208,24 +275,49 @@ function renderHist(){
   if(!S.rounds.length){$('hist').innerHTML='<tr><td>還沒有紀錄</td></tr>';return}
   const t=totals();
   $('hist').innerHTML=`<tr><th>局</th>${S.names.map(n=>`<th>${esc(n)}</th>`).join('')}<th></th></tr>`+
-   S.rounds.map((r,k)=>{const c=compute(r);return`<tr><td>${k+1}</td>${c.pts.map(p=>`<td class="${p>0?'pos':p<0?'neg':''}">${sgn(p)}</td>`).join('')}<td><button class="x" data-del="${k}" aria-label="刪除第${k+1}局">✕</button></td></tr>`}).reverse().join('')+
+   S.rounds.map((r,k)=>{const c=compute(r);return`<tr class="${k===rev?'sel':''} ${k===editIdx?'ed':''}"><td><button class="rn" data-rv="${k}" aria-label="回顧第${k+1}局">第${k+1}局</button></td>${c.pts.map((p,i)=>`<td class="${p>0?'pos':p<0?'neg':''}">${yao(r,i)?'<span class="yao" role="img" aria-label="妖怪牌">★</span>':''}${sgn(p)}</td>`).join('')}<td><button class="x" data-del="${k}" aria-label="刪除第${k+1}局">✕</button></td></tr>`}).reverse().join('')+
    `<tr><th>總分</th>${t.map(p=>`<th>${sgn(p)}</th>`).join('')}<th></th></tr><tr><th>輸贏</th>${t.map(p=>`<th class="${p>0?'pos':p<0?'neg':''}">${fmt(p*S.unit)}</th>`).join('')}<th></th></tr>`;
-  document.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>ask(`刪除第 ${+b.dataset.del+1} 局？`,()=>{S.rounds.splice(+b.dataset.del,1);save();renderAll()}));
+  document.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{const k=+b.dataset.del,c=compute(S.rounds[k]);if(editIdx>=0){note('請先完成或取消修改');return}ask(`刪除第 ${k+1} 局？\n${S.names.map((n,i)=>n+' '+sgn(c.pts[i])).join('、')}\n刪除後無法復原。`,()=>{S.rounds.splice(k,1);rev=null;save();renderAll()},'刪除這局')});
+  document.querySelectorAll('[data-rv]').forEach(b=>b.onclick=()=>{rev=+b.dataset.rv;renderHist();renderReview();$('review').scrollIntoView({behavior:'smooth',block:'start'})});
 }
 function renderSet(){
-  $('s_start').value=S.start;$('s_unit').value=S.unit;$('s_gun').value=S.gun;$('s_hr').value=S.hr;
+  $('s_start').value=S.start;$('s_unit').textContent=uf(S.unit);$('s_gun').value=S.gun;$('s_hr').value=S.hr;
   for(const k in S.bonus)$('b_'+k).value=S.bonus[k];
 }
-function renderAll(){renderBoard();renderEntry();renderHist()}
+function lockSet(){const l=S.rounds.length>0;['s_gun','s_hr'].concat(Object.keys(S.bonus).map(k=>'b_'+k)).forEach(id=>{$(id).disabled=l})}
+function renderReview(){
+  const box=$('review'),r=rev!=null?S.rounds[rev]:null;
+  $('lastbtn').disabled=!S.rounds.length;
+  if(!r){box.hidden=true;return}
+  box.hidden=false;
+  const c=compute(r),nm=i=>esc(S.names[i]);
+  $('rvt').textContent='第 '+(rev+1)+' 局回顧';
+  const odd=r.st.map((s,i)=>s==='foul'?nm(i)+' 相公':s==='sp'?nm(i)+' 特殊牌型':'').filter(Boolean);
+  $('rvbody').innerHTML=ROWS.map(([lab,k])=>{const L=lv(r,k);return`<div class="rvsec"><h3>${lab}</h3>${r.rank[k].length?r.rank[k].map(p=>{const h=r.hand[k][p],hl=(HANDS[k].find(x=>x[0]===h)||[])[1];return`<div class="rvl"><span class="rb" data-r="${L[p]+1}">第${L[p]+1}名</span><b>${nm(p)}</b>${h?`<small>${hl}</small>`:''}</div>`}).join(''):'<div class="hint">這墩沒有排名</div>'}</div>`}).join('')+(odd.length?`<div class="rvsec"><div class="hint">${odd.join('、')}</div></div>`:'');
+  $('rvprev').innerHTML=S.names.map((n,i)=>`<div><div class="n">${esc(n)}</div><div class="v ${c.pts[i]>0?'pos':c.pts[i]<0?'neg':''}">${sgn(c.pts[i])}</div><div class="n">${fmt(c.pts[i]*S.unit)}</div></div>`).join('');
+  $('rvtags').innerHTML=c.tags.map(t=>`<span class="tag">${esc(t)}</span>`).join('');
+  $('rvedit').disabled=editIdx>=0;
+}
+function startEdit(){const r=S.rounds[rev];if(!r||editIdx>=0)return;draft=E;E=clone(r);if(!E.tie)E.tie={h:[],m:[],t:[]};editIdx=rev;renderAll();$('entry').scrollIntoView({behavior:'smooth',block:'start'})}
+function endEdit(){E=draft||newEntry();draft=null;editIdx=-1}
+function renderAll(){renderBoard();renderEntry();renderHist();renderReview();lockSet()}
 let cb=null;
-function ask(t,f){$('mtext').textContent=t;cb=f;$('modal').classList.add('on')}
+function uf(u){const s=String(+(+u).toFixed(4));return(s.split('.')[1]||'').length<2?(+s).toFixed(2):s}
+function note(t){$('mtext').textContent=t;$('mok').textContent='知道了';$('mno').style.display='none';cb=null;$('modal').classList.add('on');$('mok').focus()}
+function ask(t,f,ok){$('mno').style.display='';$('mtext').textContent=t;$('mok').textContent=ok||'確定';cb=f;$('modal').classList.add('on');$('mno').focus()}
 $('mok').onclick=()=>{$('modal').classList.remove('on');cb&&cb()};
 $('mno').onclick=()=>$('modal').classList.remove('on');
-$('save').onclick=()=>{if(!valid()){$('err').textContent='還有墩沒排完，排完才能記錄';return}S.rounds.push(JSON.parse(JSON.stringify(E)));E=newEntry();save();renderAll();window.scrollTo({top:0,behavior:'smooth'})};
-$('clear').onclick=()=>{E=newEntry();renderEntry()};
-$('reset').onclick=()=>ask('確定清除所有局數？（玩家名字和設定會保留）',()=>{S.rounds=[];E=newEntry();save();renderAll()});
-[['s_start','start'],['s_unit','unit'],['s_gun','gun'],['s_hr','hr']].forEach(([id,k])=>$(id).onchange=()=>{const v=parseFloat($(id).value);if(!isNaN(v)&&v>=0){S[k]=v;save();renderAll()}});
+$('save').onclick=()=>{if(!valid()){$('err').textContent='還有墩沒排完，排完才能記錄';return}
+  if(editIdx>=0){const k=editIdx,o=compute(S.rounds[k]),n=compute(E);ask(`確認修改第 ${k+1} 局？\n修改前：${S.names.map((x,i)=>x+' '+sgn(o.pts[i])).join('、')}\n修改後：${S.names.map((x,i)=>x+' '+sgn(n.pts[i])).join('、')}`,()=>{S.rounds[k]=clone(E);endEdit();rev=k;save();renderAll();$('review').scrollIntoView({behavior:'smooth',block:'start'})},'確認修改');return}
+  S.rounds.push(clone(E));E=newEntry();save();renderAll();window.scrollTo({top:0,behavior:'smooth'})};
+$('clear').onclick=()=>{if(editIdx>=0){ask('放棄修改第 '+(editIdx+1)+' 局？\n這局會維持原本的紀錄。',()=>{endEdit();renderAll()},'放棄修改');return}ask('清除本局已輸入的排名和狀態？\n（已記錄的局不受影響）',()=>{E=newEntry();renderEntry()},'清除本局')};
+$('reset').onclick=()=>ask(`確定全部歸零？\n${S.rounds.length} 局紀錄會全部刪除，無法復原。\n（玩家名字和設定會保留）`,()=>{S.rounds=[];E=newEntry();editIdx=-1;draft=null;rev=null;save();renderAll()},'全部歸零');
+[['s_start','start'],['s_gun','gun'],['s_hr','hr']].forEach(([id,k])=>$(id).onchange=()=>{const v=parseFloat($(id).value);if(!isNaN(v)&&v>=0){S[k]=v;if(k==='start')S.unit=Math.round(v/50*10000)/10000;save();renderSet();renderAll()}});
+$('s_start').oninput=()=>{let v=parseFloat($('s_start').value);if(v>1000){v=1000;$('s_start').value=1000;note('賭太大了拉!!')}if(!isNaN(v)&&v>=0){S.start=v;S.unit=Math.round(v/50*10000)/10000;save();$('s_unit').textContent=uf(S.unit);renderAll()}};
 Object.keys(S.bonus).forEach(k=>$('b_'+k).onchange=()=>{const v=parseInt($('b_'+k).value);if(v>=1){S.bonus[k]=v;save();renderAll()}});
+$('lastbtn').onclick=()=>{if(!S.rounds.length)return;rev=S.rounds.length-1;renderHist();renderReview();$('review').scrollIntoView({behavior:'smooth',block:'start'})};
+$('rvedit').onclick=startEdit;
+$('rvclose').onclick=()=>{rev=null;renderHist();renderReview()};
 renderSet();renderAll();
 }
 </script>
