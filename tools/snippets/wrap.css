@@ -1,0 +1,2 @@
+.wrap{max-width:820px;margin:0 auto;padding:max(16px,env(safe-area-inset-top)) max(4vw,12px,env(safe-area-inset-right)) calc(60px + env(safe-area-inset-bottom))}
+#upd{position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));z-index:9;display:none;background:var(--gold);color:#3a2a00;border:0;border-radius:12px;min-height:48px;font-size:17px;box-shadow:0 6px 20px rgba(0,0,0,.4)}#upd.on{display:block}
